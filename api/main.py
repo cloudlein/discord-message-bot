@@ -1,33 +1,37 @@
+import asyncio
+from contextlib import asynccontextmanager
+
+from api.routers.send_message import router as send_message_router
+
+from core.logger import logger
 from fastapi import FastAPI
-from pydantic import BaseModel
-import  asyncio
-from bot.dispatcher import MessageDispatcher
+
 from bot.client import client
 from core import config
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    discord_task = asyncio.create_task(
+        client.start(config.DISCORD_BOT_TOKEN)
+    )
+    logger.info("Discord bot starting...")
 
-app = FastAPI(title="Discord Message Bot")
+    # Pass control back to FastAPI
+    yield
 
-class MessageRequest(BaseModel):
-    server: str
-    channel: str
-    message: str
-
-@app.on_event("startup")
-async def startup_event():
-    loop = asyncio.get_event_loop()
-    loop.create_task(run_discord_bot())
-
-async def run_discord_bot():
+    # Shutdown
     try:
-        await client.start(config.DISCORD_BOT_TOKEN)
+        logger.info("Shutting down Discord bot...")
+        await client.close()
+        discord_task.cancel()
+        logger.info("Discord bot stopped.")
     except Exception as e:
-        print(f"Failed to start Discord bot: {e}")
+        logger.exception("Error shutting down Discord bot: ", e)
 
+app = FastAPI(
+    title="Discord message bot",
+    lifespan=lifespan
+)
 
-@app.post("/send-message")
-async def send_message(request: MessageRequest):
-    await MessageDispatcher.send_message(request.server, request.channel, request.message)
-    return {
-        "status": "sent message!",
-    }
+app.include_router(send_message_router)

@@ -2,3 +2,8 @@ DISCORD_BOT_TOKEN=your_discord_token_here
 API_PORT=your_port
 API_URL=your_api_url
 
+MONGO_USERNAME=your_mongo_username
+MONGO_PASSWORD=your_mongo_password
+MONGO_PORT=your_mongo_port
+MONGO_EXPRESS_PORT=your_mongo_express_port
+MONGO_DB_NAME=your_mongo_db_name
